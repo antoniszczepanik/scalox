@@ -149,7 +149,7 @@ case class IdentifierToken(line: Int, value: String) extends Token {
     override def toString = f"${this.getClass.getSimpleName} ${value}"
 }
 case class StringToken(line: Int, value: String)     extends Token {
-    override def toString = f"${this.getClass.getSimpleName} ${value}"
+    override def toString = f"${this.getClass.getSimpleName} '${value}'"
 }
 case class NumberToken(line: Int, value: Double)     extends Token {
     override def toString = f"${this.getClass.getSimpleName} ${value}"
