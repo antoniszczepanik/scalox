@@ -2,9 +2,11 @@ import scala.util.{Try, Success, Failure}
 
 object Scalox {
 
+    private[this] var isInteractive = false
+
     def main(args: Array[String]) = {
         args.size match {
-            case 0 => prompt
+            case 0 => isInteractive = true; prompt
             case 1 => runFile(args(0))
             case _ => {
                 println("Usage: jlox [script]")
@@ -17,34 +19,32 @@ object Scalox {
         print("> ")
         val line = scala.io.StdIn.readLine
         if (line == null) return
-        val _ = run(line)
+        run(line)
         prompt
     }
 
     def runFile(path: String) = {
-        val f = readFile(path)
-        f match {
-            case Success(content) => if !run(content) then System.exit(1)
+        readFile(path) match {
+            case Success(content) => run(content)
             case Failure(msg)     => println(f"ERROR: ${msg}")
         }
     }
 
     def readFile(path: String): Try[String] = Try { io.Source.fromFile(path).mkString }
 
-    def run(command: String): Boolean = {
-        val s = new Scanner
-        s.scanTokens(command) match {
-            case None => false
-            case Some(tokens) => {
-                tokens map println
-                true
-            }
+    def run(command: String) = {
+        (new Scanner).scanTokens(command) match {
+            case Some(tokens) => tokens map println
+            case None         => ()
         }
     }
 
-    def error(line: Int, message: String) = {
-        println(s"[line $line] ERROR: $message")
+    def error(line: Int, msg: String) = if isInteractive then errorAndContinue(line, msg) else errorAndExit(line, msg)
+    def errorAndExit(line: Int, msg: String) = {
+        errorAndContinue(line, msg)
+        System.exit(1)
     }
+    def errorAndContinue(line: Int, msg: String) = println(s"[line $line] ERROR: $msg")
 }
 
 object TokenType extends Enumeration
@@ -127,7 +127,7 @@ class Scanner {
             // Identifiers and keywords.
             case s if s(0).isLetterOrDigit || s(0) == '_' => getIdentifierOrKeyword(s.mkString)
 
-            case unexpected::_ => throw new Exception(f"Illegal character: '${unexpected}' in line ${this.line}")
+            case unexpected::_ => Scalox.error(this.line, f"Illegal character: '${unexpected}'"); (None, "")
         }
     }
 
@@ -187,6 +187,5 @@ class Scanner {
             // Identifier.
             case _       => (Some(Token(TokenType.IDENTIFIER, "", Some(unidentified), this.line)), rest)
         }
-
     }
 }
