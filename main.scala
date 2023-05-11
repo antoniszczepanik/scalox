@@ -35,8 +35,8 @@ object Scalox {
     private def readFile(path: String): Try[String] = Try(io.Source.fromFile(path).mkString)
 
     private def run(command: String) = {
-        (new Scanner).scanTokens(command) match {
-            case Some(tokens) => tokens map println
+        new Scanner().scanTokens(command) match {
+            case Some(tokens) => println(Parser.parse(tokens))
             case None         => ()
         }
     }
