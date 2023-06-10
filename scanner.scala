@@ -1,7 +1,5 @@
 package scalox
 
-import scala.util.{Try, Success, Failure}
-
 class Scanner {
 
     private var line: Int = 1
@@ -173,5 +171,5 @@ case class SuperToken(line: Int)  extends Token
 case class ThisToken(line: Int)   extends Token
 case class TrueToken(line: Int)   extends Token
 case class VarToken(line: Int)    extends Token
-case class WhileToken(line: Int) extends Token
+case class WhileToken(line: Int)  extends Token
 case class EofToken(line: Int)    extends Token

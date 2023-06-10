@@ -36,7 +36,7 @@ object Scalox {
 
     private def run(command: String) = {
         new Scanner().scanTokens(command) match {
-            case Some(tokens) => println(Parser.parse(tokens))
+            case Some(tokens) => println(Interpreter.interpret(Parser.parse(tokens)))
             case None         => ()
         }
     }
