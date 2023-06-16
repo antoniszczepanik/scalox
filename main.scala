@@ -34,19 +34,25 @@ object Scalox {
 
     private def readFile(path: String): Try[String] = Try(io.Source.fromFile(path).mkString)
 
-    private def run(command: String) = {
-        new Scanner().scanTokens(command) match {
-            case Some(tokens) => println(Interpreter.interpret(Parser.parse(tokens)))
-            case None         => ()
+    private def run(command: String): Unit = {
+        try {
+          new Scanner().scanTokens(command)
+            .map(Parser.parse)
+            .map(println)
+        } catch {
+            case PanicException(line, msg) => panic(line, msg)
+            case unexpectedException => throw unexpectedException
         }
     }
 
-    def error(line: Int, msg: String) = if isInteractive then errorAndContinue(line, msg) else errorAndExit(line, msg)
+    def panic(line: Int, msg: String) = if isInteractive then printError(line, msg) else printErrorAndExit(line, msg)
 
-    private def errorAndContinue(line: Int, msg: String) = println(s"[line $line] ERROR: $msg")
+    private def printError(line: Int, msg: String) = println(s"[line $line] ERROR: $msg")
 
-    private def errorAndExit(line: Int, msg: String) = {
-        errorAndContinue(line, msg)
+    private def printErrorAndExit(line: Int, msg: String) = {
+        printError(line, msg)
         System.exit(1)
     }
 }
+
+case class PanicException(line: Int, msg: String) extends Exception(msg)

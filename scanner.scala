@@ -16,7 +16,6 @@ class Scanner {
             case (None, rest) => scanTokens(rest)
         }
     }
-
     private def getToken(source: String): (Option[Token], String) = {
        source.toList match {
             case List() => (None, "")
@@ -58,14 +57,14 @@ class Scanner {
             // Identifiers and keywords.
             case s if s(0).isLetterOrDigit || s(0) == '_' => getIdentifierOrKeyword(s.mkString)
 
-            case unexpected::_ => Scalox.error(line, f"Illegal character: '${unexpected}'"); (None, "")
+            case unexpected::_ => throw PanicException(line, f"Unexpected character: '${unexpected}'")
         }
     }
 
     private def getStringToken(rest: String): (Option[Token], String) = {
         def consumeChars(acc: String, rest: String): (String, String) = {
             rest.toList match {
-                case List() | '\n'::_ => Scalox.error(line, f"Unterminated string"); ("", "")
+                case List() | '\n'::_ => throw PanicException(line, f"Unterminated string")
                 case '"'::rest        => (acc, rest.mkString)
                 case other::rest      => consumeChars(acc + other, rest.mkString)
             }
@@ -121,7 +120,10 @@ class Scanner {
 
 abstract class Token {
     override def toString = getClass.getSimpleName
+
+    val line: Int
 }
+
 case class LeftParenToken(line: Int)  extends Token
 case class RightParenToken(line: Int) extends Token
 case class LeftBraceToken(line: Int)  extends Token

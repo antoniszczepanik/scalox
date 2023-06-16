@@ -50,19 +50,25 @@ case class Grouping(inner: Expr) extends Expr {
     override def toString = s"Grouping($inner)"
 }
 
-sealed trait Result
-case class Success(expr: Expr, rest: Seq[Token]) extends Result
-case class Failure(msg: String) extends Result
-
+sealed trait ParsingResult
+object ParsingResult {
+  case class Success(expr: Expr, rest: Seq[Token]) extends ParsingResult
+  case class Failure(msg: String) extends ParsingResult
+}
 
 object Parser {
 
+  import ParsingResult._
+
   def parse(tokens: Seq[Token]): Expr = {
-    val Success(expr, _) = equality(tokens)
-    expr
+    equality(tokens) match {
+      case Success(expr, rest) if rest.nonEmpty => throw PanicException(rest.head.line, s"unreachable tokens: $rest")
+      case Success(expr, _) => expr
+      case Failure(msg) => throw PanicException(1, s"TODO: something went wrong during parsing")
+    }
   }
 
-  private def equality(tokens: Seq[Token]): Result = {
+  private def equality(tokens: Seq[Token]): ParsingResult = {
     comparison(tokens) match {
       case Success(left, (op: (EqualEqualToken | BangEqualToken))::rest) =>
         equality(rest) match {
@@ -74,7 +80,7 @@ object Parser {
     }
   }
 
-  private def comparison(tokens: Seq[Token]): Result = {
+  private def comparison(tokens: Seq[Token]): ParsingResult = {
     term(tokens) match {
       case Success(left, (op: (GreaterToken | GreaterEqualToken | LessToken | LessEqualToken ))::rest) =>
         comparison(rest) match {
@@ -86,7 +92,7 @@ object Parser {
     }
   }
 
-  private def term(tokens: Seq[Token]): Result = {
+  private def term(tokens: Seq[Token]): ParsingResult = {
     factor(tokens) match {
       case Success(left, (op: (PlusToken | MinusToken))::rest) =>
         term(rest) match {
@@ -98,7 +104,7 @@ object Parser {
     }
   }
 
-  private def factor(tokens: Seq[Token]): Result = {
+  private def factor(tokens: Seq[Token]): ParsingResult = {
     unary(tokens) match {
       case Success(left, (op: (StarToken | SlashToken))::rest) =>
         factor(rest) match {
@@ -110,7 +116,7 @@ object Parser {
     }
   }
 
-  private def unary(tokens: Seq[Token]): Result = {
+  private def unary(tokens: Seq[Token]): ParsingResult = {
     primary(tokens) match {
       case s: Success => s
       case _ => tokens match {
@@ -124,14 +130,14 @@ object Parser {
     }
   }
 
-  private def primary(tokens: Seq[Token]): Result = {
+  private def primary(tokens: Seq[Token]): ParsingResult = {
     tokens match {
       case (literal: LiteralValue)::rest => Success(Literal(literal), rest)
       case _ => matchGrouping(tokens)
     }
   }
 
-  private def matchGrouping(tokens: Seq[Token]): Result = {
+  private def matchGrouping(tokens: Seq[Token]): ParsingResult = {
     tokens match {
       case (_: LeftParenToken)::rest =>
         equality(rest) match {
