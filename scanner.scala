@@ -5,15 +5,15 @@ class Scanner {
     private var line: Int = 1
 
     def scanTokens(source: String): Option[List[Token]]  = {
-        if (source.size == 0) then None else
         getToken(source) match {
-            case (None, rest) => scanTokens(rest)
             case (Some(token), rest) => {
                 scanTokens(rest) match {
-                    case None => Some(List(token))
                     case Some(tokens) => Some(token :: tokens)
+                    case None => Some(List(token))
                 }
             }
+            case (None, rest) if rest.size == 0 => None
+            case (None, rest) => scanTokens(rest)
         }
     }
 
