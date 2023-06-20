@@ -62,9 +62,9 @@ object Parser {
 
   def parse(tokens: Seq[Token]): Expr = {
     equality(tokens) match {
-      case Success(expr, rest) if rest.nonEmpty => throw PanicException(rest.head.line, s"unreachable tokens: $rest")
+      case Success(expr, unreachableToken::_) => throw PanicException(unreachableToken.line, s"unreachable token: $unreachableToken")
       case Success(expr, _) => expr
-      case Failure(msg) => throw PanicException(1, s"TODO: something went wrong during parsing")
+      case Failure(msg) => throw PanicException(1, s"parse error: $msg")
     }
   }
 
