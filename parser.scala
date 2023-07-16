@@ -9,15 +9,25 @@ type LiteralValue = StringToken | NumberToken | TrueToken | FalseToken | NilToke
 sealed abstract class Expr
 
 case class Literal(value: LiteralValue) extends Expr {
-    override def toString = {
-        value match {
-            case StringToken(_, s) => f"String('${s}')"
-            case NumberToken(_, n) => f"Number(${n})"
-            case TrueToken(_)      => "Boolean(true)"
-            case FalseToken(_)     => "Boolean(false)"
-            case NilToken(_)       => "nil"
-        }
+  override def toString = {
+      value match {
+          case StringToken(_, s) => f"String('${s}')"
+          case NumberToken(_, n) => f"Number(${n})"
+          case TrueToken(_)      => "Boolean(true)"
+          case FalseToken(_)     => "Boolean(false)"
+          case NilToken(_)       => "nil"
+      }
+  }
+
+  def toValue: Value = {
+    value match {
+      case StringToken(_, value) => value
+      case NumberToken(_, value) => value
+      case TrueToken(_) => true
+      case FalseToken(_) => false
+      case NilToken(_) => null
     }
+  }
 }
 
 case class Unary(operator: UnaryOperator, value: Expr) extends Expr {
@@ -53,7 +63,7 @@ case class Grouping(inner: Expr) extends Expr {
 sealed trait ParsingResult
 object ParsingResult {
   case class Success(expr: Expr, rest: Seq[Token]) extends ParsingResult
-  case class Failure(msg: String) extends ParsingResult
+  case class Failure(msg: String) extends ParsingResult 
 }
 
 object Parser {
@@ -62,9 +72,9 @@ object Parser {
 
   def parse(tokens: Seq[Token]): Expr = {
     equality(tokens) match {
-      case Success(expr, unreachableToken::_) => throw PanicException(unreachableToken.line, s"unreachable token: $unreachableToken")
+      case Success(expr, leftoverToken::_) => throw PanicException(leftoverToken.line, s"unreachable token: $leftoverToken")
       case Success(expr, _) => expr
-      case Failure(msg) => throw PanicException(1, s"parse error: $msg")
+      case failure: Failure => throw PanicException(1, s"parse error: ${failure.msg}")
     }
   }
 
@@ -73,10 +83,9 @@ object Parser {
       case Success(left, (op: (EqualEqualToken | BangEqualToken))::rest) =>
         equality(rest) match {
           case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
-          case _ => Failure(s"unable to parse binary op: $op")
+          case failure => failure
         }
-      case s: Success => s
-      case _ => Failure("unable to parse unary")
+      case other => other
     }
   }
 
@@ -85,10 +94,9 @@ object Parser {
       case Success(left, (op: (GreaterToken | GreaterEqualToken | LessToken | LessEqualToken ))::rest) =>
         comparison(rest) match {
           case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
-          case _ => Failure(s"unable to parse binary op: $op")
+          case failure => failure
         }
-      case s: Success => s
-      case _ => Failure("unable to parse unary")
+      case other => other
     }
   }
 
@@ -97,10 +105,9 @@ object Parser {
       case Success(left, (op: (PlusToken | MinusToken))::rest) =>
         term(rest) match {
           case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
-          case _ => Failure(s"unable to parse binary op: $op")
+          case failure => failure
         }
-      case s: Success => s
-      case _ => Failure("unable to parse unary")
+      case other => other
     }
   }
 
@@ -109,10 +116,9 @@ object Parser {
       case Success(left, (op: (StarToken | SlashToken))::rest) =>
         factor(rest) match {
           case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
-          case _ => Failure(s"unable to parse binary op: $op")
+          case failure => failure
         }
-      case s: Success => s
-      case _ => Failure("unable to parse unary")
+      case other => other
     }
   }
 
@@ -123,9 +129,9 @@ object Parser {
         case (op: UnaryOperator)::rest =>
           primary(rest) match {
             case Success(operand, afterOperand) => Success(Unary(op, operand), afterOperand)
-            case Failure(msg) => Failure(s"expected primary, got $msg")
+            case failure => failure
           }
-        case _ => Failure("failed to match unary")
+        case failure => Failure("expected unary operator")
       }
     }
   }
@@ -143,9 +149,9 @@ object Parser {
         equality(rest) match {
           case Success(expr, (_: RightParenToken)::afterGrouping) =>
               Success(Grouping(expr), afterGrouping)
-          case _ => Failure("failed to match grouping")
+          case _ => Failure("unterminated grouping")
         }
-      case unexpected => Failure(s"unexpected primary expression: $unexpected")
+      case unexpected => Failure(s"expected grouping, got $unexpected")
     }
   }
 }

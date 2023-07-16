@@ -38,7 +38,8 @@ object Scalox {
         try {
           new Scanner().scanTokens(command)
             .map(Parser.parse)
-            .map(println)
+            .map(Interpreter.interpret)
+            .foreach(literalVal => println(s"result: ${literalVal.value}"))
         } catch {
             case PanicException(line, msg) => panic(line, msg)
             case unexpectedException => throw unexpectedException
