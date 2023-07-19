@@ -71,29 +71,35 @@ class LiteralVal(val value: Value, line: Int) {
 
 object Interpreter {
 
-  def interpret(expr: Expr): LiteralVal = {
+  def interpret(stmt: Stmt): Unit = stmt match {
+    case expr: Expr => evalExpr(expr)
+    case PrintStmt(expr) => println(evalExpr(expr).value)
+    case other => throw PanicException(0, s"unimplemented: interpret $other")
+  }
+
+  def evalExpr(expr: Expr): LiteralVal = {
     expr match {
       case literal: Literal => literal.toLiteralVal
 
       case Unary(op, expr) => op match {
-        case MinusToken(_) => -interpret(expr)
-        case BangToken(_)  => !interpret(expr)
+        case MinusToken(_) => -evalExpr(expr)
+        case BangToken(_)  => !evalExpr(expr)
       }
 
       case Binary(expr1, op, expr2) => op match {
-        case MinusToken(_)        => interpret(expr1) - interpret(expr2)
-        case PlusToken(_)         => interpret(expr1) + interpret(expr2)
-        case SlashToken(_)        => interpret(expr1) / interpret(expr2) 
-        case StarToken(_)         => interpret(expr1) * interpret(expr2)
-        case EqualEqualToken(_)   => interpret(expr1) == interpret(expr2)
-        case BangEqualToken(_)    => interpret(expr1) != interpret(expr2)
-        case LessToken(_)         => interpret(expr1) < interpret(expr2)
-        case LessEqualToken(_)    => interpret(expr1) <= interpret(expr2)
-        case GreaterToken(_)      => interpret(expr1) > interpret(expr2)
-        case GreaterEqualToken(_) => interpret(expr1) >= interpret(expr2)
+        case MinusToken(_)        => evalExpr(expr1) - evalExpr(expr2)
+        case PlusToken(_)         => evalExpr(expr1) + evalExpr(expr2)
+        case SlashToken(_)        => evalExpr(expr1) / evalExpr(expr2) 
+        case StarToken(_)         => evalExpr(expr1) * evalExpr(expr2)
+        case EqualEqualToken(_)   => evalExpr(expr1) == evalExpr(expr2)
+        case BangEqualToken(_)    => evalExpr(expr1) != evalExpr(expr2)
+        case LessToken(_)         => evalExpr(expr1) < evalExpr(expr2)
+        case LessEqualToken(_)    => evalExpr(expr1) <= evalExpr(expr2)
+        case GreaterToken(_)      => evalExpr(expr1) > evalExpr(expr2)
+        case GreaterEqualToken(_) => evalExpr(expr1) >= evalExpr(expr2)
       }
 
-      case Grouping(expr) => interpret(expr)
+      case Grouping(expr) => evalExpr(expr)
     }
   }
 }

@@ -6,7 +6,11 @@ type UnaryOperator = MinusToken | BangToken
 type BinaryOperator = SlashToken | StarToken | MinusToken | PlusToken | EqualEqualToken | BangEqualToken | LessToken | LessEqualToken | GreaterToken | GreaterEqualToken
 type LiteralValue = StringToken | NumberToken | TrueToken | FalseToken | NilToken
 
-sealed abstract class Expr
+sealed abstract class Stmt
+
+case class PrintStmt(expr: Expr) extends Stmt
+
+sealed abstract class Expr extends Stmt
 
 case class Literal(value: LiteralValue) extends Expr {
   override def toString = {
@@ -62,7 +66,7 @@ case class Grouping(inner: Expr) extends Expr {
 
 sealed trait ParsingResult
 object ParsingResult {
-  case class Success(expr: Expr, rest: Seq[Token]) extends ParsingResult
+  case class Success(stmt: Stmt, rest: Seq[Token]) extends ParsingResult
   case class Failure(msg: String) extends ParsingResult 
 }
 
@@ -70,19 +74,33 @@ object Parser {
 
   import ParsingResult._
 
-  def parse(tokens: Seq[Token]): Expr = {
-    equality(tokens) match {
-      case Success(expr, leftoverToken::_) => throw PanicException(leftoverToken.line, s"unreachable token: $leftoverToken")
-      case Success(expr, _) => expr
+  def parse(tokens: Seq[Token]): Seq[Stmt] = {
+    statement(tokens) match {
+      case Success(stmt, Nil) => Seq(stmt)
+      case Success(stmt, rest) => Seq(stmt) ++ parse(rest)
       case failure: Failure => throw PanicException(1, s"parse error: ${failure.msg}")
     }
   }
 
+  private def statement(tokens: Seq[Token]): ParsingResult = {
+    tokens match {
+      case (_: PrintToken)::(_: LeftParenToken)::rest => expr(rest) match {
+        case Success(expr: Expr, (_: RightParenToken)::rest) => Success(PrintStmt(expr), rest)
+        case failure => failure
+      }
+      case _ => throw PanicException(0, s"unable to parse printstmt")    }
+
+  }
+
+  private def expr(tokens: Seq[Token]): ParsingResult = {
+    equality(tokens)
+  }
+
   private def equality(tokens: Seq[Token]): ParsingResult = {
     comparison(tokens) match {
-      case Success(left, (op: (EqualEqualToken | BangEqualToken))::rest) =>
+      case Success(left: Expr, (op: (EqualEqualToken | BangEqualToken))::rest) =>
         equality(rest) match {
-          case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
+          case Success(right: Expr, afterBinary) => Success(Binary(left, op, right), afterBinary)
           case failure => failure
         }
       case other => other
@@ -91,9 +109,9 @@ object Parser {
 
   private def comparison(tokens: Seq[Token]): ParsingResult = {
     term(tokens) match {
-      case Success(left, (op: (GreaterToken | GreaterEqualToken | LessToken | LessEqualToken ))::rest) =>
+      case Success(left: Expr, (op: (GreaterToken | GreaterEqualToken | LessToken | LessEqualToken ))::rest) =>
         comparison(rest) match {
-          case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
+          case Success(right: Expr, afterBinary) => Success(Binary(left, op, right), afterBinary)
           case failure => failure
         }
       case other => other
@@ -102,9 +120,9 @@ object Parser {
 
   private def term(tokens: Seq[Token]): ParsingResult = {
     factor(tokens) match {
-      case Success(left, (op: (PlusToken | MinusToken))::rest) =>
+      case Success(left: Expr, (op: (PlusToken | MinusToken))::rest) =>
         term(rest) match {
-          case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
+          case Success(right: Expr, afterBinary) => Success(Binary(left, op, right), afterBinary)
           case failure => failure
         }
       case other => other
@@ -113,9 +131,9 @@ object Parser {
 
   private def factor(tokens: Seq[Token]): ParsingResult = {
     unary(tokens) match {
-      case Success(left, (op: (StarToken | SlashToken))::rest) =>
+      case Success(left: Expr, (op: (StarToken | SlashToken))::rest) =>
         factor(rest) match {
-          case Success(right, afterBinary) => Success(Binary(left, op, right), afterBinary)
+          case Success(right: Expr, afterBinary) => Success(Binary(left, op, right), afterBinary)
           case failure => failure
         }
       case other => other
@@ -128,7 +146,7 @@ object Parser {
       case _ => tokens match {
         case (op: UnaryOperator)::rest =>
           primary(rest) match {
-            case Success(operand, afterOperand) => Success(Unary(op, operand), afterOperand)
+            case Success(operand: Expr, afterOperand) => Success(Unary(op, operand), afterOperand)
             case failure => failure
           }
         case failure => Failure("expected unary operator")
@@ -147,7 +165,7 @@ object Parser {
     tokens match {
       case (_: LeftParenToken)::rest =>
         equality(rest) match {
-          case Success(expr, (_: RightParenToken)::afterGrouping) =>
+          case Success(expr: Expr, (_: RightParenToken)::afterGrouping) =>
               Success(Grouping(expr), afterGrouping)
           case _ => Failure("unterminated grouping")
         }

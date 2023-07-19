@@ -34,12 +34,11 @@ object Scalox {
 
     private def readFile(path: String): Try[String] = Try(io.Source.fromFile(path).mkString)
 
-    private def run(command: String): Unit = {
+    private def run(source: String): Unit = {
         try {
-          new Scanner().scanTokens(command)
+          new Scanner().scanTokens(source)
             .map(Parser.parse)
-            .map(Interpreter.interpret)
-            .foreach(literalVal => println(s"result: ${literalVal.value}"))
+            .map(stmts => stmts.foreach(Interpreter.interpret))
         } catch {
             case PanicException(line, msg) => panic(line, msg)
             case unexpectedException => throw unexpectedException
