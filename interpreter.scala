@@ -2,13 +2,6 @@ package scalox
 
 type Value = String | Boolean | Double | Null
 
-def getType(value: Value): String = value match {
-  case _: String => "String"
-  case _: Boolean => "Boolean"
-  case _: Double => "Double"
-  case null => "Null"
-}
-
 class LiteralVal(val value: Value) {
   def +(other: LiteralVal): LiteralVal = (value, other.value) match {
     case (a: Double, b: Double) => LiteralVal(a + b)
@@ -64,6 +57,16 @@ class LiteralVal(val value: Value) {
     case (a: Double, b: Double) => LiteralVal(a >= b)
     case (a, b) => throw PanicException(-1, s"cannot check equality for ${getType(a)} and ${getType(b)}")
   }
+
+  def unary_! = value match {
+    case v: Boolean => LiteralVal(!v)
+    case value => throw PanicException(-1, s"cannot perform boolean negation ${getType(value)}")
+  }
+
+  def unary_- = value match {
+    case v: Double => LiteralVal(-v)
+    case value => throw PanicException(-1, s"cannot negate ${getType(value)}")
+  }
 }
 
 object Interpreter {
@@ -73,8 +76,8 @@ object Interpreter {
       case literal: Literal => LiteralVal(literal.toValue)
 
       case Unary(op, expr) => op match {
-        case MinusToken(_) => interpret(expr)
-        case BangToken(_)  => interpret(expr)
+        case MinusToken(_) => -interpret(expr)
+        case BangToken(_)  => !interpret(expr)
       }
 
       case Binary(expr1, op, expr2) => op match {
@@ -93,4 +96,11 @@ object Interpreter {
       case Grouping(expr) => interpret(expr)
     }
   }
+}
+
+def getType(value: Value): String = value match {
+  case _: String => "String"
+  case _: Boolean => "Boolean"
+  case _: Double => "Double"
+  case null => "Null"
 }
