@@ -12,6 +12,7 @@ def getType(value: Value): String = value match {
 class LiteralVal(val value: Value) {
   def +(other: LiteralVal): LiteralVal = (value, other.value) match {
     case (a: Double, b: Double) => LiteralVal(a + b)
+    case (a: String, b: String) => LiteralVal(a.concat(b))
     case (a, b) => throw PanicException(-1, s"addition not defined for ${getType(a)} and ${getType(b)}")
   }
 
@@ -32,11 +33,15 @@ class LiteralVal(val value: Value) {
 
   def ==(other: LiteralVal): LiteralVal = (value, other.value) match {
     case (a: Double, b: Double) => LiteralVal(a == b)
+    case (a: Boolean, b: Boolean) => LiteralVal(a == b)
+    case (a: String, b: String) => LiteralVal(a == b)
     case (a, b) => throw PanicException(-1, s"cannot check equality for ${getType(a)} and ${getType(b)}")
   }
 
   def !=(other: LiteralVal): LiteralVal = (value, other.value) match {
     case (a: Double, b: Double) => LiteralVal(a != b)
+    case (a: Boolean, b: Boolean) => LiteralVal(a != b)
+    case (a: String, b: String) => LiteralVal(a != b)
     case (a, b) => throw PanicException(-1, s"cannot check equality for ${getType(a)} and ${getType(b)}")
   }
 
