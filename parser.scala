@@ -19,13 +19,13 @@ case class Literal(value: LiteralValue) extends Expr {
       }
   }
 
-  def toValue: Value = {
+  def toLiteralVal: LiteralVal = {
     value match {
-      case StringToken(_, value) => value
-      case NumberToken(_, value) => value
-      case TrueToken(_) => true
-      case FalseToken(_) => false
-      case NilToken(_) => null
+      case StringToken(line, value) => LiteralVal(value, line)
+      case NumberToken(line, value) => LiteralVal(value, line)
+      case TrueToken(line) => LiteralVal(true, line)
+      case FalseToken(line) => LiteralVal(false, line)
+      case NilToken(line) => LiteralVal(null, line)
     }
   }
 }
